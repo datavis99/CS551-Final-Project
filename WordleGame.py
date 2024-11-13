@@ -1,15 +1,13 @@
 import heapq
-from collections import defaultdict, Counter
+from collections import Counter
 
-# Step 1: Load the Word List
+# Step 1: Load Words from words.txt
 def load_words(word_list_file):
     with open(word_list_file, 'r') as f:
-        words = [word.strip().lower() for word in f if len(word.strip()) == 5 and word.isalpha()]
+        words = [word.strip().lower() for word in f if word.strip()]
     return words
 
-# For demonstration, let's assume 'words.txt' contains your word list
-word_list = load_words(r"C:\Users\igene\CS551-Final-Project\words.txt")
-valid_words = set(word_list)
+word_list = load_words('words.txt')
 
 # Step 2: Define the Heuristic Function
 def heuristic(candidate_words):
@@ -48,14 +46,26 @@ def update_possible_words(possible_words, guess, feedback):
     new_possible_words = []
     for word in possible_words:
         match = True
+        used_letters = [False]*5  # Track letters used for 'Y' feedback
         for i in range(5):
-            if feedback[i] == 'G' and word[i] != guess[i]:
-                match = False
-                break
+            if feedback[i] == 'G':
+                if word[i] != guess[i]:
+                    match = False
+                    break
             elif feedback[i] == 'Y':
                 if guess[i] == word[i] or guess[i] not in word:
                     match = False
                     break
+                else:
+                    idx = word.find(guess[i])
+                    while idx != -1:
+                        if guess[idx] != word[idx] and not used_letters[idx]:
+                            used_letters[idx] = True
+                            break
+                        idx = word.find(guess[i], idx + 1)
+                    else:
+                        match = False
+                        break
             elif feedback[i] == 'B':
                 if guess[i] in word:
                     match = False
@@ -70,7 +80,6 @@ def a_star_wordle_solver(target_word, valid_words):
     guess_history = []
     heap = []
     heapq.heappush(heap, (0, [], possible_words))
-    h_func = heuristic(possible_words)
     
     while heap:
         cost, path, possible_words = heapq.heappop(heap)
@@ -93,10 +102,24 @@ def a_star_wordle_solver(target_word, valid_words):
             heapq.heappush(heap, (cost + 1 + h_func(word), path + [word], possible_words))
     return None  # No solution found within 6 guesses
 
-# Example Usage
-target_word = 'crane'  # The word to guess
+# Step 5: Get Target Word from User Input
+user_input = input(f"Enter an index between 0 and {len(word_list) - 1}: ")
+
+try:
+    index = int(user_input)
+    if 0 <= index < len(word_list):
+        target_word = word_list[index]
+    else:
+        print("Index out of range.")
+        exit()
+except ValueError:
+    print("Invalid input. Please enter an integer.")
+    exit()
+
+# Step 6: Run the Wordle Solver
 solution_path = a_star_wordle_solver(target_word, word_list)
 
+# Step 7: Print the Result
 if solution_path:
     print(f"Solved in {len(solution_path)} guesses: {solution_path}")
 else:
